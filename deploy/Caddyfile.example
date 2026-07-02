@@ -1,0 +1,10 @@
+# Приклад для Caddy (потрібен домен з HTTPS для Mini App)
+# /etc/caddy/Caddyfile
+
+budget.твій-домен.com {
+    reverse_proxy localhost:8080
+}
+
+# Після цього в .env:
+# WEBAPP_URL=https://budget.твій-домен.com
+# WEBAPP_PORT=8080

@@ -1,0 +1,16 @@
+[Unit]
+Description=Budget Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/budget-bot
+EnvironmentFile=/opt/budget-bot/.env
+ExecStart=/opt/budget-bot/.venv/bin/python /opt/budget-bot/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

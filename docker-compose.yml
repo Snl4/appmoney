@@ -1,0 +1,15 @@
+services:
+  budget-bot:
+    build: .
+    container_name: budget-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - budget-net
+
+networks:
+  budget-net:
+    driver: bridge
