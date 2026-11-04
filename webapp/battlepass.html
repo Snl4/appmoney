@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Pass — Долина Капібар</title>
+  <meta name="description" content="Сезонний Battle Pass Долини Капібар: квести, нагороди, прогрес і бонуси.">
+  <link rel="icon" href="/static/assets/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/battlepass.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__glow ambient__glow--a"></div>
+    <div class="ambient__glow ambient__glow--b"></div>
+    <div class="ambient__grain"></div>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="/battlepass" aria-label="CapyLand — Battle Pass">
+      <img src="/static/assets/logo.png" alt="" width="44" height="33">
+      <span>
+        <strong>CAPYLAND</strong>
+        <small>Battle Pass</small>
+      </span>
+    </a>
+    <nav class="header-nav" aria-label="Навігація">
+      <a href="#progress"><i class="fa-solid fa-trophy"></i><span>Прогрес</span></a>
+      <a href="#quests"><i class="fa-solid fa-scroll"></i><span>Квести</span></a>
+      <a href="#bonuses"><i class="fa-solid fa-gift"></i><span>Бонуси</span></a>
+    </nav>
+    <div class="header-actions">
+      <label class="chip player-chip" title="Minecraft нік">
+        <i class="fa-solid fa-user"></i>
+        <input id="playerName" type="text" value="Steve" maxlength="16" aria-label="Minecraft нік">
+      </label>
+      <span class="chip chip--accent" id="seasonChip">
+        <i class="fa-solid fa-leaf"></i> Сезон 3
+      </span>
+      <button type="button" class="btn-ghost" id="premiumBtn">
+        <i class="fa-solid fa-crown"></i> Premium
+      </button>
+      <a class="btn-ghost" href="/battlepass/admin" title="Адмінка">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero__bg" aria-hidden="true">
+        <img src="/static/assets/hero.png" alt="" class="hero__img">
+        <div class="hero__veil"></div>
+      </div>
+      <div class="hero__content">
+        <p class="brand-mark">CAPYLAND</p>
+        <h1 id="heroTitle">Battle Pass</h1>
+        <p class="hero__lead">Сезон «Золота Долина» — виконуй квести в Minecraft, збирай XP і відкривай нагороди світу капібар.</p>
+        <div class="hero__cta">
+          <a class="btn-primary" href="#how">
+            <i class="fa-solid fa-bolt"></i> Як отримати нагороду
+          </a>
+          <a class="btn-secondary" href="#quests">
+            <i class="fa-solid fa-scroll"></i> Мої квести
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section how-section" id="how" aria-labelledby="howTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="howTitle">Як працює Battle Pass</h2>
+          <p>Три кроки від гри в Minecraft до нагороди на сайті.</p>
+        </div>
+      </div>
+      <ol class="how-steps">
+        <li class="how-step">
+          <span class="how-step__num">1</span>
+          <div>
+            <h3>Виконуй квести в грі</h3>
+            <p>Ходи, крафти, бий мобів — прогрес іде з Minecraft автоматично.</p>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step__num">2</span>
+          <div>
+            <h3>Забирай XP тут</h3>
+            <p>Коли смужка квесту повна — натисни <strong>Забрати XP</strong>.</p>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step__num">3</span>
+          <div>
+            <h3>Відкривай нагороди</h3>
+            <p>XP піднімає рівень. Доступні слоти світяться — натисни, щоб відкрити.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="goal-card" id="goalCard" aria-live="polite"></div>
+    </section>
+
+    <section class="section progress-section" id="progress" aria-labelledby="progressTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="progressTitle">Прогрес сезону</h2>
+          <p>XP з квестів піднімає рівень і відкриває слоти на треку нижче.</p>
+        </div>
+        <div class="xp-panel" aria-live="polite">
+          <div class="xp-panel__meta">
+            <span>Зараз: рівень <strong id="levelVal">7</strong></span>
+            <span id="xpPct">0%</span>
+          </div>
+          <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="2200" aria-valuenow="1840" aria-label="Прогрес рівня">
+            <div class="xp-bar__fill" id="xpFill"></div>
+          </div>
+          <div class="xp-panel__meta xp-panel__meta--sub">
+            <span id="xpLabel">1840 / 2200 XP</span>
+            <span id="xpNeed">Ще 360 XP до рівня 8</span>
+          </div>
+          <div class="xp-panel__next" id="xpNextReward"></div>
+          <div class="xp-panel__timer">
+            <i class="fa-regular fa-clock"></i>
+            <span id="seasonTimer">До кінця сезону: 18д 06:42:11</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="track-legend" aria-hidden="true">
+        <span><i class="fa-solid fa-lock"></i> Закрито</span>
+        <span class="is-ready"><i class="fa-solid fa-hand-pointer"></i> Можна забрати</span>
+        <span class="is-done"><i class="fa-solid fa-check"></i> Отримано</span>
+        <span class="is-prem"><i class="fa-solid fa-crown"></i> Premium</span>
+      </div>
+
+      <div class="track-wrap">
+        <button type="button" class="track-nav track-nav--prev" id="trackPrev" aria-label="Попередні нагороди">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <div class="track" id="rewardTrack" tabindex="0" aria-label="Трек нагород Battle Pass"></div>
+        <button type="button" class="track-nav track-nav--next" id="trackNext" aria-label="Наступні нагороди">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <section class="section quests-section" id="quests" aria-labelledby="questsTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="questsTitle">Квести → XP</h2>
+          <p>Спочатку виконай у Minecraft, потім забери XP на цій сторінці.</p>
+        </div>
+        <div class="segmented" role="tablist" aria-label="Тип квестів">
+          <button type="button" class="seg active" role="tab" aria-selected="true" data-quest-tab="daily">Щоденні</button>
+          <button type="button" class="seg" role="tab" aria-selected="false" data-quest-tab="weekly">Тижневі</button>
+        </div>
+      </div>
+      <div class="quest-summary" id="questSummary"></div>
+      <div class="quest-list" id="questList" role="list"></div>
+    </section>
+
+    <section class="section bonuses-section" id="bonuses" aria-labelledby="bonusesTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="bonusesTitle">Бонуси сезону</h2>
+          <p>Додаткові множники й подарунки для активних гравців.</p>
+        </div>
+      </div>
+      <div class="bonus-grid" id="bonusGrid"></div>
+    </section>
+
+    <section class="section premium-section" aria-labelledby="premiumTitle">
+      <div class="premium-banner">
+        <div class="premium-banner__copy">
+          <span class="chip chip--accent"><i class="fa-solid fa-crown"></i> Premium Pass</span>
+          <h2 id="premiumTitle">Відкрий золотий трек</h2>
+          <p>Усе нижче — реальні бонуси в API + команди LuckPerms на Minecraft-сервер.</p>
+          <ul class="premium-live-perks" id="premiumLivePerks">
+            <li data-perk="dual"><i class="fa-solid fa-layer-group"></i> Подвійні нагороди — free + Premium трек на кожному рівні</li>
+            <li data-perk="skins"><i class="fa-solid fa-shirt"></i> Ексклюзивні скіни — LP права <code>bp.skin.*</code></li>
+            <li data-perk="xp"><i class="fa-solid fa-bolt"></i> +20% XP з кожного квесту</li>
+            <li data-perk="boost"><i class="fa-solid fa-rocket"></i> Миттєвий буст до рівня 5 при активації</li>
+          </ul>
+          <button type="button" class="btn-primary" id="unlockPremium">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Активувати Premium
+          </button>
+        </div>
+        <ul class="premium-banner__perks" id="premiumStatusList">
+          <li><i class="fa-solid fa-circle-info"></i> Статус завантажується…</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <img src="/static/assets/logo.png" alt="" width="40" height="30">
+      <p>© CapyLand 2022–2026. Світ, який пишуть гравці.</p>
+    </div>
+    <p class="footer-note">Демо-сторінка Battle Pass у стилі Долини Капібар. Не є офіційним продуктом Minecraft.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="fx-overlay" id="fxOverlay" hidden aria-hidden="true">
+    <div class="fx-backdrop"></div>
+    <div class="fx-burst" id="fxBurst" aria-hidden="true"></div>
+    <div class="fx-card" id="fxCard">
+      <div class="fx-rays" aria-hidden="true"></div>
+      <div class="fx-stage" id="fxStage">
+        <div class="fx-chest" id="fxChest">
+          <div class="fx-chest__lid"></div>
+          <div class="fx-chest__body"></div>
+        </div>
+        <div class="fx-icon-wrap" id="fxIconWrap">
+          <i class="fa-solid fa-trophy" id="fxIcon"></i>
+        </div>
+      </div>
+      <p class="fx-kicker" id="fxKicker">Нагороду отримано</p>
+      <h2 class="fx-title" id="fxTitle">Назва</h2>
+      <p class="fx-sub" id="fxSub"></p>
+      <button type="button" class="btn-primary fx-close" id="fxClose">Далі</button>
+    </div>
+  </div>
+
+  <div class="fx-float-layer" id="fxFloatLayer" aria-hidden="true"></div>
+  <script src="/static/battlepass.js"></script>
+</body>
+</html>

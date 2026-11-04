@@ -9,6 +9,7 @@ from aiohttp import web
 
 from bot import budget, database
 from bot.budget import format_money, month_label, new_id
+from bot.battlepass_api import setup_battlepass_routes
 
 logger = logging.getLogger("webapp-api")
 WEBAPP_DIR = Path(__file__).resolve().parent.parent / "webapp"
@@ -199,6 +200,7 @@ def create_app(bot_token: str) -> web.Application:
     app = web.Application()
     app["bot_token"] = bot_token
     app.router.add_get("/", handle_index)
+    setup_battlepass_routes(app)
     app.router.add_static("/static/", WEBAPP_DIR, name="static")
     app.router.add_get("/api/summary", api_summary)
     app.router.add_get("/api/events", api_events)
