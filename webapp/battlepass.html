@@ -60,35 +60,80 @@
         <h1 id="heroTitle">Battle Pass</h1>
         <p class="hero__lead">Сезон «Золота Долина» — виконуй квести в Minecraft, збирай XP і відкривай нагороди світу капібар.</p>
         <div class="hero__cta">
-          <a class="btn-primary" href="#quests">
-            <i class="fa-solid fa-bolt"></i> До квестів
+          <a class="btn-primary" href="#how">
+            <i class="fa-solid fa-bolt"></i> Як отримати нагороду
           </a>
-          <a class="btn-secondary" href="#progress">
-            <i class="fa-solid fa-route"></i> Дивитись трек
+          <a class="btn-secondary" href="#quests">
+            <i class="fa-solid fa-scroll"></i> Мої квести
           </a>
         </div>
       </div>
+    </section>
+
+    <section class="section how-section" id="how" aria-labelledby="howTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="howTitle">Як працює Battle Pass</h2>
+          <p>Три кроки від гри в Minecraft до нагороди на сайті.</p>
+        </div>
+      </div>
+      <ol class="how-steps">
+        <li class="how-step">
+          <span class="how-step__num">1</span>
+          <div>
+            <h3>Виконуй квести в грі</h3>
+            <p>Ходи, крафти, бий мобів — прогрес іде з Minecraft автоматично.</p>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step__num">2</span>
+          <div>
+            <h3>Забирай XP тут</h3>
+            <p>Коли смужка квесту повна — натисни <strong>Забрати XP</strong>.</p>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step__num">3</span>
+          <div>
+            <h3>Відкривай нагороди</h3>
+            <p>XP піднімає рівень. Доступні слоти світяться — натисни, щоб відкрити.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="goal-card" id="goalCard" aria-live="polite"></div>
     </section>
 
     <section class="section progress-section" id="progress" aria-labelledby="progressTitle">
       <div class="section-head">
         <div>
           <h2 id="progressTitle">Прогрес сезону</h2>
-          <p>Рухайся рівнями й забирай безкоштовні та Premium нагороди.</p>
+          <p>XP з квестів піднімає рівень і відкриває слоти на треку нижче.</p>
         </div>
         <div class="xp-panel" aria-live="polite">
           <div class="xp-panel__meta">
-            <span>Рівень <strong id="levelVal">7</strong></span>
-            <span id="xpLabel">1840 / 2200 XP</span>
+            <span>Зараз: рівень <strong id="levelVal">7</strong></span>
+            <span id="xpPct">0%</span>
           </div>
           <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="2200" aria-valuenow="1840" aria-label="Прогрес рівня">
             <div class="xp-bar__fill" id="xpFill"></div>
           </div>
+          <div class="xp-panel__meta xp-panel__meta--sub">
+            <span id="xpLabel">1840 / 2200 XP</span>
+            <span id="xpNeed">Ще 360 XP до рівня 8</span>
+          </div>
+          <div class="xp-panel__next" id="xpNextReward"></div>
           <div class="xp-panel__timer">
             <i class="fa-regular fa-clock"></i>
             <span id="seasonTimer">До кінця сезону: 18д 06:42:11</span>
           </div>
         </div>
+      </div>
+
+      <div class="track-legend" aria-hidden="true">
+        <span><i class="fa-solid fa-lock"></i> Закрито</span>
+        <span class="is-ready"><i class="fa-solid fa-hand-pointer"></i> Можна забрати</span>
+        <span class="is-done"><i class="fa-solid fa-check"></i> Отримано</span>
+        <span class="is-prem"><i class="fa-solid fa-crown"></i> Premium</span>
       </div>
 
       <div class="track-wrap">
@@ -105,14 +150,15 @@
     <section class="section quests-section" id="quests" aria-labelledby="questsTitle">
       <div class="section-head">
         <div>
-          <h2 id="questsTitle">Квести</h2>
-          <p>Щоденні й тижневі завдання — головне джерело XP.</p>
+          <h2 id="questsTitle">Квести → XP</h2>
+          <p>Спочатку виконай у Minecraft, потім забери XP на цій сторінці.</p>
         </div>
         <div class="segmented" role="tablist" aria-label="Тип квестів">
           <button type="button" class="seg active" role="tab" aria-selected="true" data-quest-tab="daily">Щоденні</button>
           <button type="button" class="seg" role="tab" aria-selected="false" data-quest-tab="weekly">Тижневі</button>
         </div>
       </div>
+      <div class="quest-summary" id="questSummary"></div>
       <div class="quest-list" id="questList" role="list"></div>
     </section>
 

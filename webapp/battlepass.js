@@ -203,13 +203,97 @@ async function playRewardOpenFx(reward) {
   });
 }
 
+function allQuests() {
+  const q = state.view?.quests || {};
+  return [...(q.daily || []), ...(q.weekly || []), ...(q.season || [])];
+}
+
+function rewardStatus(reward, player) {
+  if (reward.claimed) return { key: "done", label: "Отримано" };
+  if (reward.claimable) return { key: "ready", label: "Забрати" };
+  if (reward.premium && !player.premium) return { key: "premium", label: "Premium" };
+  if (reward.level > player.level) return { key: "locked", label: `З Lv ${reward.level}` };
+  return { key: "locked", label: "Закрито" };
+}
+
+function renderGoal() {
+  const card = $("#goalCard");
+  if (!card || !state.view?.player) return;
+  const player = state.view.player;
+  const claimableQuests = allQuests().filter((q) => q.claimable);
+  const claimableRewards = (state.view.rewards || []).filter((r) => r.claimable);
+  const inProgress = allQuests().filter((q) => !q.claimed && !q.claimable);
+  const nextReward = (state.view.rewards || []).find((r) => !r.claimed && !r.premium) 
+    || (state.view.rewards || []).find((r) => !r.claimed);
+
+  let step = 1;
+  let title = "Виконай квест у Minecraft";
+  let detail = inProgress.length
+    ? `Найближче: «${inProgress[0].title}» — ${inProgress[0].current}/${inProgress[0].target}`
+    : "Усі квести виконані або вже забрані.";
+  let cta = { href: "#quests", text: "До квестів" };
+
+  if (claimableQuests.length) {
+    step = 2;
+    title = `Забери XP з ${claimableQuests.length} квест${claimableQuests.length === 1 ? "у" : "ів"}`;
+    detail = `«${claimableQuests[0].title}» готовий — +${claimableQuests[0].xp} XP чекають на сторінці.`;
+    cta = { href: "#quests", text: "Забрати XP" };
+  } else if (claimableRewards.length) {
+    step = 3;
+    title = `Відкрий ${claimableRewards.length} доступн${claimableRewards.length === 1 ? "у нагороду" : "і нагороди"}`;
+    detail = `«${claimableRewards[0].name}» (рівень ${claimableRewards[0].level}) уже можна забрати.`;
+    cta = { href: "#progress", text: "До нагород" };
+  } else if (nextReward && nextReward.level > player.level) {
+    const need = player.xp_to_next - player.xp;
+    step = 2;
+    title = `Ще ${need.toLocaleString("uk-UA")} XP до рівня ${player.level + 1}`;
+    detail = nextReward
+      ? `Після цього відкриється «${nextReward.name}».`
+      : "Продовжуй виконувати квести.";
+    cta = { href: "#quests", text: "Фармити XP" };
+  }
+
+  card.innerHTML = `
+    <div class="goal-card__step">Крок ${step} з 3</div>
+    <div class="goal-card__body">
+      <h3>${title}</h3>
+      <p>${detail}</p>
+    </div>
+    <a class="btn-secondary goal-card__cta" href="${cta.href}">${cta.text}</a>
+  `;
+}
+
 function renderProgress() {
   const { season, player } = state.view;
   if (!season || !player) return;
   $("#seasonChip").innerHTML = `<i class="fa-solid fa-leaf"></i> Сезон ${season.number}`;
   $("#levelVal").textContent = String(player.level);
-  $("#xpLabel").textContent = `${player.xp.toLocaleString("uk-UA")} / ${player.xp_to_next.toLocaleString("uk-UA")} XP`;
+  const xpLeft = Math.max(0, player.xp_to_next - player.xp);
   const pct = Math.min(100, Math.round((player.xp / player.xp_to_next) * 100));
+  $("#xpLabel").textContent = `${player.xp.toLocaleString("uk-UA")} / ${player.xp_to_next.toLocaleString("uk-UA")} XP цього рівня`;
+  $("#xpPct").textContent = `${pct}%`;
+  $("#xpNeed").textContent = xpLeft === 0
+    ? "Рівень заповнено — бери нагороду"
+    : `Ще ${xpLeft.toLocaleString("uk-UA")} XP до рівня ${player.level + 1}`;
+
+  const nextFree = (state.view.rewards || []).find((r) => !r.claimed && !r.premium && r.level >= player.level);
+  const nextAny = (state.view.rewards || []).find((r) => r.claimable)
+    || (state.view.rewards || []).find((r) => !r.claimed && r.level > player.level);
+  const nextBox = $("#xpNextReward");
+  if (nextBox) {
+    if (nextAny?.claimable) {
+      nextBox.innerHTML = `<i class="fa-solid fa-gift"></i> Доступно зараз: <strong>${nextAny.name}</strong> — натисни на треку`;
+      nextBox.className = "xp-panel__next is-ready";
+    } else if (nextFree || nextAny) {
+      const target = nextFree || nextAny;
+      nextBox.innerHTML = `<i class="fa-solid fa-route"></i> Далі на треку: <strong>${target.name}</strong> · рівень ${target.level}`;
+      nextBox.className = "xp-panel__next";
+    } else {
+      nextBox.innerHTML = `<i class="fa-solid fa-check"></i> Усі доступні нагороди цього шляху отримані`;
+      nextBox.className = "xp-panel__next is-done";
+    }
+  }
+
   const fill = $("#xpFill");
   requestAnimationFrame(() => {
     fill.style.width = `${pct}%`;
@@ -231,10 +315,12 @@ function renderProgress() {
 function renderTrack() {
   const track = $("#rewardTrack");
   const rewards = state.view.rewards || [];
-  const level = state.view.player?.level || 1;
+  const player = state.view.player;
+  const level = player?.level || 1;
   track.innerHTML = "";
 
   rewards.forEach((reward, index) => {
+    const status = rewardStatus(reward, player);
     const el = document.createElement("article");
     el.className = [
       "reward",
@@ -243,8 +329,10 @@ function renderTrack() {
       reward.locked ? "is-locked" : "",
       reward.level === level ? "is-current" : "",
       reward.claimable ? "is-claimable" : "",
+      `status-${status.key}`,
     ].filter(Boolean).join(" ");
     el.style.animationDelay = `${index * 40}ms`;
+    el.setAttribute("aria-label", `${reward.name}, рівень ${reward.level}, ${status.label}`);
     el.innerHTML = `
       <div class="reward__level">Рівень ${reward.level}</div>
       <div class="reward__slot" title="${reward.name}">
@@ -252,16 +340,18 @@ function renderTrack() {
           <i class="fa-solid ${reward.premium ? "fa-crown" : "fa-gift"}"></i>
         </span>
         <i class="fa-solid ${safeIcon(reward.icon)}" aria-hidden="true"></i>
+        ${reward.locked && !reward.claimed ? '<span class="reward__lock"><i class="fa-solid fa-lock"></i></span>' : ""}
       </div>
       <div class="reward__name">${reward.name}</div>
+      <div class="reward__status status-${status.key}">${status.label}</div>
     `;
     el.addEventListener("click", async () => {
       if (state.fxBusy) return;
       if (reward.claimed) return toast(`Уже отримано: ${reward.name}`);
       if (reward.locked) {
         return toast(reward.premium && !state.view.player.premium
-          ? "Потрібен Premium Pass"
-          : `Відкриється на рівні ${reward.level}`);
+          ? "Ця нагорода з Premium Pass"
+          : `Щоб відкрити «${reward.name}», потрібен рівень ${reward.level}. Зараз у тебе ${level}.`);
       }
       state.fxBusy = true;
       try {
@@ -286,13 +376,29 @@ function renderTrack() {
     track.appendChild(el);
   });
 
-  const current = track.querySelector(".is-current");
-  if (current) current.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  const focus = track.querySelector(".is-claimable") || track.querySelector(".is-current");
+  if (focus) focus.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+}
+
+function renderQuestSummary() {
+  const box = $("#questSummary");
+  if (!box) return;
+  const list = state.view.quests?.[state.questTab] || [];
+  const ready = list.filter((q) => q.claimable).length;
+  const done = list.filter((q) => q.claimed).length;
+  const active = list.filter((q) => !q.claimed && !q.claimable).length;
+  const xpReady = list.filter((q) => q.claimable).reduce((s, q) => s + q.xp, 0);
+  box.innerHTML = `
+    <div class="quest-summary__item"><strong>${active}</strong><span>в процесі</span></div>
+    <div class="quest-summary__item is-ready"><strong>${ready}</strong><span>готові забрати${xpReady ? ` · +${xpReady} XP` : ""}</span></div>
+    <div class="quest-summary__item is-done"><strong>${done}</strong><span>вже отримано</span></div>
+  `;
 }
 
 function renderQuests() {
   const list = $("#questList");
   const quests = state.view.quests?.[state.questTab] || [];
+  renderQuestSummary();
   list.innerHTML = "";
   if (!quests.length) {
     list.innerHTML = `<div class="empty-quests">Немає квестів у цій вкладці</div>`;
@@ -300,21 +406,36 @@ function renderQuests() {
   }
 
   quests.forEach((quest, index) => {
+    const left = Math.max(0, quest.target - quest.current);
     const pct = Math.min(100, Math.round((quest.current / quest.target) * 100));
     const el = document.createElement("article");
-    el.className = `quest${quest.claimable ? " is-claimable" : ""}`;
+    el.className = `quest${quest.claimable ? " is-claimable" : ""}${quest.claimed ? " is-claimed" : ""}`;
     el.style.animationDelay = `${index * 50}ms`;
     el.setAttribute("role", "listitem");
-    const label = quest.claimed ? "Отримано" : quest.claimable ? "Забрати" : "В процесі";
+
+    let statusText = `Залишилось ${left.toLocaleString("uk-UA")} · зроби в Minecraft`;
+    let label = "Ще не готово";
+    if (quest.claimed) {
+      statusText = "XP уже зараховано до Battle Pass";
+      label = "XP отримано";
+    } else if (quest.claimable) {
+      statusText = "Готово! Натисни, щоб отримати XP";
+      label = "Забрати XP";
+    }
+
     el.innerHTML = `
       <div class="quest__icon"><i class="fa-solid ${safeIcon(quest.icon, "fa-scroll")}"></i></div>
       <div class="quest__body">
-        <h3>${quest.title}</h3>
+        <div class="quest__top">
+          <h3>${quest.title}</h3>
+          <span class="quest__state ${quest.claimable ? "is-ready" : quest.claimed ? "is-done" : ""}">${quest.claimable ? "Готово" : quest.claimed ? "Забрано" : `${pct}%`}</span>
+        </div>
         <p>${quest.desc}</p>
         <div class="quest__progress">
           <div class="quest__bar" aria-hidden="true"><span style="width:${pct}%"></span></div>
-          <small>${quest.current}/${quest.target}</small>
+          <small>${quest.current.toLocaleString("uk-UA")} / ${quest.target.toLocaleString("uk-UA")}</small>
         </div>
+        <p class="quest__hint">${statusText}</p>
       </div>
       <div class="quest__reward">
         <div class="quest__xp">+${quest.xp} XP</div>
@@ -365,7 +486,8 @@ function renderAll() {
   }
   const season = state.view.season;
   $(".hero__lead").textContent =
-    `Сезон «${season.name}» — виконуй квести в Minecraft, збирай XP і відкривай нагороди.`;
+    `Сезон «${season.name}» — квест у грі → XP на сайті → нагорода на треку.`;
+  renderGoal();
   renderProgress();
   renderTrack();
   renderQuests();
