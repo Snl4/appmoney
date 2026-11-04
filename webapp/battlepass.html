@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Pass — Долина Капібар</title>
+  <meta name="description" content="Сезонний Battle Pass Долини Капібар: квести, нагороди, прогрес і бонуси.">
+  <link rel="icon" href="/static/assets/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/battlepass.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__glow ambient__glow--a"></div>
+    <div class="ambient__glow ambient__glow--b"></div>
+    <div class="ambient__grain"></div>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="/battlepass" aria-label="CapyLand — Battle Pass">
+      <img src="/static/assets/logo.png" alt="" width="44" height="33">
+      <span>
+        <strong>CAPYLAND</strong>
+        <small>Battle Pass</small>
+      </span>
+    </a>
+    <nav class="header-nav" aria-label="Навігація">
+      <a href="#progress"><i class="fa-solid fa-trophy"></i><span>Прогрес</span></a>
+      <a href="#quests"><i class="fa-solid fa-scroll"></i><span>Квести</span></a>
+      <a href="#bonuses"><i class="fa-solid fa-gift"></i><span>Бонуси</span></a>
+    </nav>
+    <div class="header-actions">
+      <span class="chip chip--accent" id="seasonChip">
+        <i class="fa-solid fa-leaf"></i> Сезон 3
+      </span>
+      <button type="button" class="btn-ghost" id="premiumBtn">
+        <i class="fa-solid fa-crown"></i> Premium
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero__bg" aria-hidden="true">
+        <img src="/static/assets/hero.png" alt="" class="hero__img">
+        <div class="hero__veil"></div>
+      </div>
+      <div class="hero__content">
+        <p class="brand-mark">CAPYLAND</p>
+        <h1 id="heroTitle">Battle Pass</h1>
+        <p class="hero__lead">Сезон «Золота Долина» — виконуй квести, збирай XP і відкривай нагороди світу капібар.</p>
+        <div class="hero__cta">
+          <a class="btn-primary" href="#quests">
+            <i class="fa-solid fa-bolt"></i> До квестів
+          </a>
+          <a class="btn-secondary" href="#progress">
+            <i class="fa-solid fa-route"></i> Дивитись трек
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section progress-section" id="progress" aria-labelledby="progressTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="progressTitle">Прогрес сезону</h2>
+          <p>Рухайся рівнями й забирай безкоштовні та Premium нагороди.</p>
+        </div>
+        <div class="xp-panel" aria-live="polite">
+          <div class="xp-panel__meta">
+            <span>Рівень <strong id="levelVal">7</strong></span>
+            <span id="xpLabel">1840 / 2200 XP</span>
+          </div>
+          <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="2200" aria-valuenow="1840" aria-label="Прогрес рівня">
+            <div class="xp-bar__fill" id="xpFill"></div>
+          </div>
+          <div class="xp-panel__timer">
+            <i class="fa-regular fa-clock"></i>
+            <span id="seasonTimer">До кінця сезону: 18д 06:42:11</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="track-wrap">
+        <button type="button" class="track-nav track-nav--prev" id="trackPrev" aria-label="Попередні нагороди">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <div class="track" id="rewardTrack" tabindex="0" aria-label="Трек нагород Battle Pass"></div>
+        <button type="button" class="track-nav track-nav--next" id="trackNext" aria-label="Наступні нагороди">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <section class="section quests-section" id="quests" aria-labelledby="questsTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="questsTitle">Квести</h2>
+          <p>Щоденні й тижневі завдання — головне джерело XP.</p>
+        </div>
+        <div class="segmented" role="tablist" aria-label="Тип квестів">
+          <button type="button" class="seg active" role="tab" aria-selected="true" data-quest-tab="daily">Щоденні</button>
+          <button type="button" class="seg" role="tab" aria-selected="false" data-quest-tab="weekly">Тижневі</button>
+        </div>
+      </div>
+      <div class="quest-list" id="questList" role="list"></div>
+    </section>
+
+    <section class="section bonuses-section" id="bonuses" aria-labelledby="bonusesTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="bonusesTitle">Бонуси сезону</h2>
+          <p>Додаткові множники й подарунки для активних гравців.</p>
+        </div>
+      </div>
+      <div class="bonus-grid" id="bonusGrid"></div>
+    </section>
+
+    <section class="section premium-section" aria-labelledby="premiumTitle">
+      <div class="premium-banner">
+        <div class="premium-banner__copy">
+          <span class="chip chip--accent"><i class="fa-solid fa-crown"></i> Premium Pass</span>
+          <h2 id="premiumTitle">Відкрий золотий трек</h2>
+          <p>Подвійні нагороди, ексклюзивні скіни, +20% XP і миттєвий буст до рівня 5.</p>
+            <button type="button" class="btn-primary" id="unlockPremium">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Активувати Premium
+          </button>
+        </div>
+        <ul class="premium-banner__perks">
+          <li><i class="fa-solid fa-check"></i> 30+ Premium нагород</li>
+          <li><i class="fa-solid fa-check"></i> Сезонний титул «Хранитель Долини»</li>
+          <li><i class="fa-solid fa-check"></i> Бонусний скриньковий ключ щотижня</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <img src="/static/assets/logo.png" alt="" width="40" height="30">
+      <p>© CapyLand 2022–2026. Світ, який пишуть гравці.</p>
+    </div>
+    <p class="footer-note">Демо-сторінка Battle Pass у стилі Долини Капібар. Не є офіційним продуктом Minecraft.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/battlepass.js"></script>
+</body>
+</html>

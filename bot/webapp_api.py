@@ -51,6 +51,10 @@ async def handle_index(_: web.Request) -> web.FileResponse:
     return web.FileResponse(WEBAPP_DIR / "index.html")
 
 
+async def handle_battlepass(_: web.Request) -> web.FileResponse:
+    return web.FileResponse(WEBAPP_DIR / "battlepass.html")
+
+
 async def api_summary(request: web.Request) -> web.Response:
     user_id = await get_user_id(request)
     if not user_id:
@@ -199,6 +203,8 @@ def create_app(bot_token: str) -> web.Application:
     app = web.Application()
     app["bot_token"] = bot_token
     app.router.add_get("/", handle_index)
+    app.router.add_get("/battlepass", handle_battlepass)
+    app.router.add_get("/battlepass/", handle_battlepass)
     app.router.add_static("/static/", WEBAPP_DIR, name="static")
     app.router.add_get("/api/summary", api_summary)
     app.router.add_get("/api/events", api_events)
