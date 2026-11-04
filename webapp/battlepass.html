@@ -177,15 +177,19 @@
         <div class="premium-banner__copy">
           <span class="chip chip--accent"><i class="fa-solid fa-crown"></i> Premium Pass</span>
           <h2 id="premiumTitle">Відкрий золотий трек</h2>
-          <p>Подвійні нагороди, ексклюзивні скіни, +20% XP і миттєвий буст до рівня 5.</p>
-            <button type="button" class="btn-primary" id="unlockPremium">
+          <p>Усе нижче — реальні бонуси в API + команди LuckPerms на Minecraft-сервер.</p>
+          <ul class="premium-live-perks" id="premiumLivePerks">
+            <li data-perk="dual"><i class="fa-solid fa-layer-group"></i> Подвійні нагороди — free + Premium трек на кожному рівні</li>
+            <li data-perk="skins"><i class="fa-solid fa-shirt"></i> Ексклюзивні скіни — LP права <code>bp.skin.*</code></li>
+            <li data-perk="xp"><i class="fa-solid fa-bolt"></i> +20% XP з кожного квесту</li>
+            <li data-perk="boost"><i class="fa-solid fa-rocket"></i> Миттєвий буст до рівня 5 при активації</li>
+          </ul>
+          <button type="button" class="btn-primary" id="unlockPremium">
             <i class="fa-solid fa-wand-magic-sparkles"></i> Активувати Premium
           </button>
         </div>
-        <ul class="premium-banner__perks">
-          <li><i class="fa-solid fa-check"></i> 30+ Premium нагород</li>
-          <li><i class="fa-solid fa-check"></i> Сезонний титул «Хранитель Долини»</li>
-          <li><i class="fa-solid fa-check"></i> Бонусний скриньковий ключ щотижня</li>
+        <ul class="premium-banner__perks" id="premiumStatusList">
+          <li><i class="fa-solid fa-circle-info"></i> Статус завантажується…</li>
         </ul>
       </div>
     </section>

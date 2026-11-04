@@ -79,9 +79,8 @@ async def api_set_premium(request: web.Request) -> web.Response:
     if not player:
         return json_error("player_required")
     premium = bool(body.get("premium", True))
-    await db.set_player_premium(player, premium)
-    view = await logic.build_player_view(player)
-    return web.json_response({"ok": True, "view": view})
+    result = await logic.set_premium(player, premium)
+    return web.json_response(result)
 
 
 async def api_ingest_events(request: web.Request) -> web.Response:
@@ -95,7 +94,35 @@ async def api_ingest_events(request: web.Request) -> web.Response:
     if not isinstance(events, list) or not events:
         return json_error("events_required")
     result = await logic.ingest_events(events, source=body.get("source") or "minecraft")
+    # Also return pending LuckPerms / reward commands for the plugin to run.
+    player_names = {str(e.get("player") or "").strip() for e in events if e.get("player")}
+    grants = []
+    for name in player_names:
+        grants.extend(await db.list_pending_grants(name, limit=20))
+    if not player_names:
+        grants = await db.list_pending_grants(limit=20)
+    result["pending_grants"] = grants
     return web.json_response(result)
+
+
+async def api_list_grants(request: web.Request) -> web.Response:
+    """Minecraft plugin polls this to run LuckPerms / give commands."""
+    if not _check_key(request, _minecraft_key()):
+        return json_error("unauthorized", 401)
+    player = (request.query.get("player") or "").strip() or None
+    grants = await db.list_pending_grants(player, limit=int(request.query.get("limit") or 50))
+    return web.json_response({"ok": True, "grants": grants})
+
+
+async def api_ack_grants(request: web.Request) -> web.Response:
+    if not _check_key(request, _minecraft_key()):
+        return json_error("unauthorized", 401)
+    body = await request.json()
+    ids = body.get("ids") or body.get("grant_ids") or []
+    if not isinstance(ids, list):
+        return json_error("ids_required")
+    updated = await db.ack_grants([str(i) for i in ids])
+    return web.json_response({"ok": True, "acked": updated})
 
 
 async def api_admin_overview(request: web.Request) -> web.Response:
@@ -206,6 +233,8 @@ def setup_battlepass_routes(app: web.Application) -> None:
     app.router.add_post("/api/battlepass/claim-reward", api_claim_reward)
     app.router.add_post("/api/battlepass/premium", api_set_premium)
     app.router.add_post("/api/battlepass/events", api_ingest_events)
+    app.router.add_get("/api/battlepass/grants", api_list_grants)
+    app.router.add_post("/api/battlepass/grants/ack", api_ack_grants)
 
     app.router.add_get("/api/battlepass/admin/overview", api_admin_overview)
     app.router.add_post("/api/battlepass/admin/seasons", api_admin_create_season)

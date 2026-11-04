@@ -136,9 +136,20 @@ async def init_battlepass_db() -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS pending_grants (
+                id TEXT PRIMARY KEY,
+                minecraft_name TEXT NOT NULL COLLATE NOCASE,
+                command TEXT NOT NULL,
+                reason TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                delivered INTEGER NOT NULL DEFAULT 0,
+                delivered_at TEXT
+            );
+
             CREATE INDEX IF NOT EXISTS idx_quests_season ON quests(season_id, active);
             CREATE INDEX IF NOT EXISTS idx_rewards_season ON rewards(season_id, level);
             CREATE INDEX IF NOT EXISTS idx_events_player ON event_log(minecraft_name, created_at);
+            CREATE INDEX IF NOT EXISTS idx_grants_pending ON pending_grants(delivered, minecraft_name);
             """
         )
         await db.commit()
@@ -567,6 +578,61 @@ async def recent_events(limit: int = 50) -> list[dict]:
     return rows
 
 
+def render_command(template: str, player: str) -> str:
+    return (
+        (template or "")
+        .replace("%player%", player)
+        .replace("{player}", player)
+        .replace("%name%", player)
+        .strip()
+    )
+
+
+async def enqueue_grant(minecraft_name: str, command: str, reason: str = "") -> str | None:
+    cmd = render_command(command, minecraft_name)
+    if not cmd:
+        return None
+    grant_id = new_id("g_")
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO pending_grants (id, minecraft_name, command, reason, created_at, delivered)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            (grant_id, minecraft_name, cmd, reason, utc_now()),
+        )
+        await db.commit()
+    return grant_id
+
+
+async def list_pending_grants(minecraft_name: str | None = None, limit: int = 50) -> list[dict]:
+    sql = "SELECT * FROM pending_grants WHERE delivered = 0"
+    params: list[Any] = []
+    if minecraft_name:
+        sql += " AND minecraft_name = ?"
+        params.append(minecraft_name)
+    sql += " ORDER BY created_at ASC LIMIT ?"
+    params.append(limit)
+    async with aiosqlite.connect(DB_PATH) as db:
+        return await _fetchall(db, sql, tuple(params))
+
+
+async def ack_grants(grant_ids: list[str]) -> int:
+    if not grant_ids:
+        return 0
+    now = utc_now()
+    async with aiosqlite.connect(DB_PATH) as db:
+        count = 0
+        for gid in grant_ids:
+            cur = await db.execute(
+                "UPDATE pending_grants SET delivered = 1, delivered_at = ? WHERE id = ? AND delivered = 0",
+                (now, gid),
+            )
+            count += cur.rowcount
+        await db.commit()
+    return count
+
+
 async def seed_demo_if_empty() -> None:
     seasons = await list_seasons()
     if seasons:
@@ -590,23 +656,23 @@ async def seed_demo_if_empty() -> None:
     )
 
     demo_rewards = [
-        (1, "50 монет", "fa-coins", False),
-        (2, "Ключ скрині", "fa-key", True),
-        (3, "Шолом мандрівника", "fa-helmet-safety", False),
-        (4, "XP буст 1г", "fa-bolt", True),
-        (5, "Емоут «Чіл»", "fa-face-smile", False),
-        (6, "Скін плаща", "fa-shirt", True),
-        (7, "Баннер Долини", "fa-flag", False),
-        (8, "200 монет", "fa-sack-dollar", True),
-        (9, "Фейєрверк", "fa-fire", False),
-        (10, "Титул «Слідопит»", "fa-certificate", True),
-        (11, "Набір інструментів", "fa-toolbox", False),
-        (12, "Пегас-маунт скін", "fa-horse", True),
-        (13, "Рідкісний кейс", "fa-box-open", False),
-        (14, "Аура золота", "fa-sun", True),
-        (15, "Корона сезону", "fa-crown", True),
+        (1, "50 монет", "fa-coins", False, "eco give %player% 50"),
+        (2, "Ключ скрині", "fa-key", True, "crates key give %player% common 1"),
+        (3, "Шолом мандрівника", "fa-helmet-safety", False, "give %player% iron_helmet 1"),
+        (4, "XP буст 1г", "fa-bolt", True, "lp user %player% permission settemp bp.boost.xp true 1h"),
+        (5, "Емоут «Чіл»", "fa-face-smile", False, "emotes unlock %player% chill"),
+        (6, "Скін плаща Premium", "fa-shirt", True, "lp user %player% permission set bp.skin.cloak.gold true"),
+        (7, "Баннер Долини", "fa-flag", False, "give %player% white_banner 1"),
+        (8, "200 монет", "fa-sack-dollar", True, "eco give %player% 200"),
+        (9, "Фейєрверк", "fa-fire", False, "give %player% firework_rocket 16"),
+        (10, "Титул «Слідопит»", "fa-certificate", True, "lp user %player% meta setsuffix 100 \" &6Слідопит\""),
+        (11, "Набір інструментів", "fa-toolbox", False, "kit give tools %player%"),
+        (12, "Пегас-маунт скін", "fa-horse", True, "lp user %player% permission set bp.skin.mount.pegasus true"),
+        (13, "Рідкісний кейс", "fa-box-open", False, "crates key give %player% rare 1"),
+        (14, "Аура золота", "fa-sun", True, "lp user %player% permission set bp.cosmetic.aura.gold true"),
+        (15, "Корона сезону", "fa-crown", True, "lp user %player% parent add bp.season3.champion"),
     ]
-    for level, name, icon, premium in demo_rewards:
+    for level, name, icon, premium, cmd in demo_rewards:
         await upsert_reward(
             {
                 "season_id": season["id"],
@@ -614,7 +680,7 @@ async def seed_demo_if_empty() -> None:
                 "name": name,
                 "icon": icon,
                 "premium": premium,
-                "grant_command": f"bp grant %player% season3_lvl{level}{'_prem' if premium else ''}",
+                "grant_command": cmd,
             }
         )
 

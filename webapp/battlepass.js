@@ -441,7 +441,7 @@ function renderQuests() {
         <p class="quest__hint">${statusText}</p>
       </div>
       <div class="quest__reward">
-        <div class="quest__xp">+${quest.xp} XP</div>
+        <div class="quest__xp">+${quest.xp} XP${quest.xp_bonus ? ` <small class="xp-bonus">(+${quest.xp_bonus})</small>` : ""}</div>
         <button type="button" class="btn-claim ${quest.claimed ? "is-done" : ""}" data-id="${quest.id}" ${!quest.claimable ? "disabled" : ""}>
           ${label}
         </button>
@@ -482,6 +482,33 @@ function renderBonuses() {
   `).join("");
 }
 
+function renderPremiumStatus() {
+  const player = state.view?.player;
+  const list = $("#premiumStatusList");
+  const perks = $("#premiumLivePerks");
+  if (!player || !list) return;
+  const on = !!player.premium;
+  const benefits = player.benefits || {};
+  list.innerHTML = `
+    <li><i class="fa-solid ${on ? "fa-check" : "fa-xmark"}"></i> Premium зараз: <strong>${on ? "УВІМКНЕНО" : "вимкнено"}</strong></li>
+    <li><i class="fa-solid fa-layer-group"></i> Подвійний трек: free + Premium нагороди</li>
+    <li><i class="fa-solid fa-bolt"></i> Бонус XP: <strong>+${benefits.xp_bonus_percent || 0}%</strong></li>
+    <li><i class="fa-solid fa-rocket"></i> Буст рівня: ${on ? `активний (мін. Lv ${benefits.level_boost_to || 5})` : "після активації → Lv 5"}</li>
+    <li><i class="fa-solid fa-key"></i> LuckPerms: група <code>bp.premium</code> + права скінів</li>
+  `;
+  if (perks) {
+    perks.querySelectorAll("[data-perk]").forEach((el) => {
+      el.classList.toggle("is-on", on);
+    });
+  }
+  const btn = $("#unlockPremium");
+  if (btn) {
+    btn.innerHTML = on
+      ? '<i class="fa-solid fa-crown"></i> Premium активний'
+      : '<i class="fa-solid fa-wand-magic-sparkles"></i> Активувати Premium';
+  }
+}
+
 function renderAll() {
   if (!state.view?.season) {
     toast("Немає активного сезону — створи в адмінці");
@@ -495,6 +522,7 @@ function renderAll() {
   renderTrack();
   renderQuests();
   renderBonuses();
+  renderPremiumStatus();
 }
 
 async function loadView() {
@@ -555,7 +583,11 @@ function bindEvents() {
       });
       state.view = res.view;
       renderAll();
-      toast(active ? "Premium Pass активовано" : "Premium Pass вимкнено");
+      if (active && res.level_boost && res.level_boost.to > res.level_boost.from) {
+        toast(`Premium ON · буст Lv ${res.level_boost.from} → ${res.level_boost.to} · +20% XP · LP queued`);
+      } else {
+        toast(active ? "Premium ON · +20% XP · LuckPerms у черзі" : "Premium вимкнено");
+      }
     } catch (err) {
       toast(err.message);
     }

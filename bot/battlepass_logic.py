@@ -6,6 +6,18 @@ from typing import Any
 
 from bot import battlepass_db as db
 
+# Real Premium Pass benefits (wired into claim/activate flows).
+PREMIUM_XP_BONUS = 0.20  # +20% XP from quests
+PREMIUM_LEVEL_BOOST = 5  # instant boost at least to level 5
+PREMIUM_LP_COMMANDS = [
+    "lp user %player% parent add bp.premium",
+    "lp user %player% permission set bp.skin.premium true",
+    "lp user %player% permission set bp.cosmetic.exclusive true",
+]
+PREMIUM_REVOKE_COMMANDS = [
+    "lp user %player% parent remove bp.premium",
+]
+
 
 def xp_needed_for_level(season: dict, level: int) -> int:
     """XP required to go from `level` to `level + 1`."""
@@ -69,6 +81,8 @@ async def build_player_view(minecraft_name: str, season: dict | None = None) -> 
         progress = await db.get_quest_progress(minecraft_name, quest)
         current = min(int(progress["progress"]), int(quest["target"]))
         done = current >= int(quest["target"])
+        base_xp = int(quest["xp_reward"])
+        xp_shown = int(round(base_xp * (1 + PREMIUM_XP_BONUS))) if player["premium"] else base_xp
         item = {
             "id": quest["id"],
             "title": quest["title"],
@@ -78,7 +92,9 @@ async def build_player_view(minecraft_name: str, season: dict | None = None) -> 
             "event_type": quest["event_type"],
             "current": current,
             "target": int(quest["target"]),
-            "xp": int(quest["xp_reward"]),
+            "xp": xp_shown,
+            "xp_base": base_xp,
+            "xp_bonus": max(0, xp_shown - base_xp),
             "claimed": bool(progress["claimed"]),
             "claimable": done and not progress["claimed"],
             "period_key": progress["period_key"],
@@ -87,6 +103,8 @@ async def build_player_view(minecraft_name: str, season: dict | None = None) -> 
         grouped.setdefault(quest["kind"], []).append(item)
 
     needed = xp_needed_for_level(season, int(state["level"]))
+    free_claimable = sum(1 for r in reward_view if r["claimable"] and not r["premium"])
+    prem_claimable = sum(1 for r in reward_view if r["claimable"] and r["premium"])
     return {
         "season": {
             "id": season["id"],
@@ -104,9 +122,20 @@ async def build_player_view(minecraft_name: str, season: dict | None = None) -> 
             "level": state["level"],
             "xp": state["xp"],
             "xp_to_next": needed,
+            "xp_bonus_percent": int(PREMIUM_XP_BONUS * 100) if player["premium"] else 0,
+            "benefits": {
+                "dual_track": True,
+                "exclusive_skins": bool(player["premium"]),
+                "xp_bonus_percent": int(PREMIUM_XP_BONUS * 100) if player["premium"] else 0,
+                "level_boost_to": PREMIUM_LEVEL_BOOST if player["premium"] else None,
+            },
         },
         "rewards": reward_view,
         "quests": grouped,
+        "stats": {
+            "free_claimable": free_claimable,
+            "premium_claimable": prem_claimable,
+        },
     }
 
 
@@ -179,6 +208,7 @@ async def claim_quest(minecraft_name: str, quest_id: str) -> dict:
     if not season:
         return {"ok": False, "error": "no_active_season"}
 
+    player = await db.ensure_player(minecraft_name)
     quests = await db.list_quests(season["id"], active_only=True)
     quest = next((q for q in quests if q["id"] == quest_id), None)
     if not quest:
@@ -193,12 +223,21 @@ async def claim_quest(minecraft_name: str, quest_id: str) -> dict:
     progress["claimed"] = True
     await db.save_quest_progress(progress)
 
+    base_xp = int(quest["xp_reward"])
+    xp_gained = int(round(base_xp * (1 + PREMIUM_XP_BONUS))) if player["premium"] else base_xp
+
     state = await db.get_player_season(minecraft_name, season["id"])
-    state = apply_xp(season, state, int(quest["xp_reward"]))
+    state = apply_xp(season, state, xp_gained)
     await db.save_player_season(state)
 
     view = await build_player_view(minecraft_name, season)
-    return {"ok": True, "xp_gained": int(quest["xp_reward"]), "view": view}
+    return {
+        "ok": True,
+        "xp_gained": xp_gained,
+        "xp_base": base_xp,
+        "xp_bonus": xp_gained - base_xp,
+        "view": view,
+    }
 
 
 async def claim_reward(minecraft_name: str, level: int, premium: bool) -> dict:
@@ -226,12 +265,62 @@ async def claim_reward(minecraft_name: str, level: int, premium: bool) -> dict:
     state["claimed_rewards"] = claimed
     await db.save_player_season(state)
 
+    grant_id = await db.enqueue_grant(
+        minecraft_name,
+        reward.get("grant_command") or "",
+        reason=f"reward:{season['slug']}:L{level}:{'prem' if premium else 'free'}",
+    )
+
     view = await build_player_view(minecraft_name, season)
     return {
         "ok": True,
         "reward": reward,
-        "grant_command": reward.get("grant_command") or "",
+        "grant_command": db.render_command(reward.get("grant_command") or "", minecraft_name),
+        "grant_id": grant_id,
         "view": view,
+    }
+
+
+async def set_premium(minecraft_name: str, premium: bool) -> dict:
+    """Activate/deactivate Premium: LP groups, exclusive skins, level boost, XP bonus flag."""
+    season = await db.get_active_season()
+    player = await db.ensure_player(minecraft_name)
+    was_premium = bool(player["premium"])
+    await db.set_player_premium(minecraft_name, premium)
+
+    grants: list[str] = []
+    boosted_from = None
+    boosted_to = None
+
+    if premium and not was_premium:
+        for cmd in PREMIUM_LP_COMMANDS:
+            gid = await db.enqueue_grant(minecraft_name, cmd, reason="premium_activate")
+            if gid:
+                grants.append(gid)
+        if season:
+            state = await db.get_player_season(minecraft_name, season["id"])
+            boosted_from = int(state["level"])
+            if boosted_from < PREMIUM_LEVEL_BOOST:
+                state["level"] = PREMIUM_LEVEL_BOOST
+                # Fresh XP bar after boost feels fairer than keeping overflow XP.
+                state["xp"] = 0
+                await db.save_player_season(state)
+                boosted_to = PREMIUM_LEVEL_BOOST
+            else:
+                boosted_to = boosted_from
+    elif not premium and was_premium:
+        for cmd in PREMIUM_REVOKE_COMMANDS:
+            gid = await db.enqueue_grant(minecraft_name, cmd, reason="premium_deactivate")
+            if gid:
+                grants.append(gid)
+
+    view = await build_player_view(minecraft_name, season)
+    return {
+        "ok": True,
+        "view": view,
+        "grants_queued": len(grants),
+        "level_boost": {"from": boosted_from, "to": boosted_to} if boosted_from is not None else None,
+        "benefits_active": bool(premium),
     }
 
 

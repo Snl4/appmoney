@@ -1068,7 +1068,47 @@ main {
   color: var(--text-soft);
   font-size: 0.86rem;
   max-width: 36rem;
+  margin-bottom: 14px;
+}
+
+.premium-live-perks {
+  list-style: none;
+  display: grid;
+  gap: 8px;
   margin-bottom: 18px;
+}
+
+.premium-live-perks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.premium-live-perks li i {
+  color: var(--gold);
+  margin-top: 2px;
+}
+
+.premium-live-perks li.is-on {
+  border-color: rgba(255, 169, 1, 0.4);
+  color: var(--gold-soft);
+}
+
+.premium-live-perks code,
+.premium-banner__perks code {
+  color: var(--gold-soft);
+  font-size: 0.72rem;
+}
+
+.xp-bonus {
+  color: #6ee7b7;
+  font-weight: 700;
 }
 
 .premium-banner__perks {
