@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Pass Admin — Capyland</title>
+  <link rel="icon" href="/static/assets/logo.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/battlepass.css">
+  <link rel="stylesheet" href="/static/battlepass_admin.css">
+</head>
+<body class="admin-body">
+  <header class="site-header">
+    <a class="brand" href="/battlepass">
+      <img src="/static/assets/logo.png" alt="" width="44" height="33">
+      <span><strong>CAPYLAND</strong><small>BP Admin</small></span>
+    </a>
+    <div class="header-actions">
+      <a class="btn-ghost" href="/battlepass"><i class="fa-solid fa-eye"></i> Гравець</a>
+      <label class="chip chip--accent admin-key-chip">
+        API key
+        <input type="password" id="adminKey" value="capy-admin-dev" autocomplete="off">
+      </label>
+      <button type="button" class="btn-primary" id="reloadBtn"><i class="fa-solid fa-rotate"></i> Оновити</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-panel">
+      <h1>Керування Battle Pass</h1>
+      <p class="lead">Створюй сезони й квести. Прогрес гравців приходить з Minecraft-плагіна через <code>POST /api/battlepass/events</code>.</p>
+    </section>
+
+    <section class="admin-grid">
+      <article class="admin-card">
+        <h2>Новий сезон</h2>
+        <form id="seasonForm" class="stack">
+          <label>Номер <input name="number" type="number" value="4" required></label>
+          <label>Назва <input name="name" value="Новий сезон" required></label>
+          <label>Опис <input name="description" value="Опис сезону"></label>
+          <label>Старт <input name="starts_at" type="datetime-local" required></label>
+          <label>Кінець <input name="ends_at" type="datetime-local" required></label>
+          <label class="check"><input name="active" type="checkbox" checked> Зробити активним</label>
+          <button class="btn-primary" type="submit">Створити сезон</button>
+        </form>
+        <div id="seasonsList" class="mini-list"></div>
+      </article>
+
+      <article class="admin-card">
+        <h2>Новий квест</h2>
+        <form id="questForm" class="stack">
+          <label>Сезон ID <input name="season_id" id="questSeasonId" required></label>
+          <label>Тип
+            <select name="kind">
+              <option value="daily">daily</option>
+              <option value="weekly">weekly</option>
+              <option value="season">season</option>
+            </select>
+          </label>
+          <label>Назва <input name="title" required placeholder="Пройди 1000 блоків"></label>
+          <label>Опис <input name="description" placeholder="Що має зробити гравець"></label>
+          <label>Іконка FA <input name="icon" value="fa-person-walking"></label>
+          <label>Подія Minecraft
+            <select name="event_type" id="eventTypeSelect"></select>
+          </label>
+          <label>Ціль <input name="target" type="number" value="100" required></label>
+          <label>XP нагорода <input name="xp_reward" type="number" value="100" required></label>
+          <label>Скидання
+            <select name="resets">
+              <option value="daily">daily</option>
+              <option value="weekly">weekly</option>
+              <option value="never">never</option>
+            </select>
+          </label>
+          <button class="btn-primary" type="submit">Додати квест</button>
+        </form>
+      </article>
+
+      <article class="admin-card">
+        <h2>Нагорода рівня</h2>
+        <form id="rewardForm" class="stack">
+          <label>Сезон ID <input name="season_id" id="rewardSeasonId" required></label>
+          <label>Рівень <input name="level" type="number" value="1" min="1" required></label>
+          <label>Назва <input name="name" required placeholder="50 монет"></label>
+          <label>Іконка FA <input name="icon" value="fa-coins"></label>
+          <label>Команда видачі <input name="grant_command" placeholder="give %player% diamond 1"></label>
+          <label class="check"><input name="premium" type="checkbox"> Premium трек</label>
+          <button class="btn-primary" type="submit">Зберегти нагороду</button>
+        </form>
+      </article>
+
+      <article class="admin-card">
+        <h2>Симуляція Minecraft-події</h2>
+        <p class="hint">Поки немає плагіна — можна вручну «накрутити» прогрес як сервер.</p>
+        <form id="simForm" class="stack">
+          <label>Нік гравця <input name="player" value="Steve" required></label>
+          <label>Тип події <select name="type" id="simEventType"></select></label>
+          <label>Кількість <input name="amount" type="number" value="10" min="1" required></label>
+          <label>meta.biome (для visit_biome) <input name="biome" placeholder="plains"></label>
+          <button class="btn-secondary" type="submit">Надіслати подію</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="admin-card wide">
+      <h2>Активні квести</h2>
+      <div id="questsTable" class="table-wrap"></div>
+    </section>
+
+    <section class="admin-card wide">
+      <h2>Останні події з сервера</h2>
+      <div id="eventsTable" class="table-wrap"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/static/battlepass_admin.js"></script>
+</body>
+</html>

@@ -210,6 +210,30 @@ button {
   color: var(--gold-soft);
 }
 
+.player-chip {
+  padding-right: 8px;
+}
+
+.player-chip input {
+  width: 96px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.empty-quests {
+  padding: 28px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  font-size: 0.84rem;
+}
+
 .btn-primary,
 .btn-secondary,
 .btn-ghost,

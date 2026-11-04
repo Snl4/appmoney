@@ -1,133 +1,11 @@
-const SEASON = {
-  name: "Золота Долина",
-  number: 3,
-  endsAt: Date.now() + (18 * 24 + 6) * 60 * 60 * 1000 + 42 * 60 * 1000,
-  level: 7,
-  xp: 1840,
-  xpToNext: 2200,
-  premium: false,
-};
-
-const REWARDS = [
-  { level: 1, name: "50 монет", icon: "fa-coins", premium: false, claimed: true },
-  { level: 2, name: "Ключ скрині", icon: "fa-key", premium: true, claimed: true },
-  { level: 3, name: "Шолом мандрівника", icon: "fa-helmet-safety", premium: false, claimed: true },
-  { level: 4, name: "XP буст 1г", icon: "fa-bolt", premium: true, claimed: true },
-  { level: 5, name: "Емоут «Чіл»", icon: "fa-face-smile", premium: false, claimed: true },
-  { level: 6, name: "Скін плаща", icon: "fa-shirt", premium: true, claimed: true },
-  { level: 7, name: "Баннер Долини", icon: "fa-flag", premium: false, claimed: false },
-  { level: 8, name: "200 монет", icon: "fa-sack-dollar", premium: true, claimed: false },
-  { level: 9, name: "Фейєрверк", icon: "fa-fire", premium: false, claimed: false },
-  { level: 10, name: "Титул «Слідопит»", icon: "fa-certificate", premium: true, claimed: false },
-  { level: 11, name: "Набір інструментів", icon: "fa-toolbox", premium: false, claimed: false },
-  { level: 12, name: "Пегас-маунт скін", icon: "fa-horse", premium: true, claimed: false },
-  { level: 13, name: "Рідкісний кейс", icon: "fa-box-open", premium: false, claimed: false },
-  { level: 14, name: "Аура золота", icon: "fa-sun", premium: true, claimed: false },
-  { level: 15, name: "Корона сезону", icon: "fa-crown", premium: true, claimed: false },
-];
-
-const QUESTS = {
-  daily: [
-    {
-      id: "d1",
-      title: "Прогулянка долиною",
-      desc: "Пройди 2 000 блоків пішки",
-      icon: "fa-person-walking",
-      current: 1480,
-      target: 2000,
-      xp: 120,
-      claimed: false,
-    },
-    {
-      id: "d2",
-      title: "Ремісник дня",
-      desc: "Скрафти 16 предметів",
-      icon: "fa-hammer",
-      current: 16,
-      target: 16,
-      xp: 150,
-      claimed: false,
-    },
-    {
-      id: "d3",
-      title: "Голос громади",
-      desc: "Напиши 10 повідомлень у чаті",
-      icon: "fa-comments",
-      current: 4,
-      target: 10,
-      xp: 80,
-      claimed: false,
-    },
-    {
-      id: "d4",
-      title: "Полювання на зомбі",
-      desc: "Убий 20 ворожих мобів",
-      icon: "fa-skull",
-      current: 20,
-      target: 20,
-      xp: 180,
-      claimed: true,
-    },
-  ],
-  weekly: [
-    {
-      id: "w1",
-      title: "Будівничий тижня",
-      desc: "Постав 500 блоків",
-      icon: "fa-cube",
-      current: 312,
-      target: 500,
-      xp: 600,
-      claimed: false,
-    },
-    {
-      id: "w2",
-      title: "Економіка Долини",
-      desc: "Зроби 5 угод на ринку",
-      icon: "fa-handshake",
-      current: 2,
-      target: 5,
-      xp: 450,
-      claimed: false,
-    },
-    {
-      id: "w3",
-      title: "Дослідник країв",
-      desc: "Відвідай 3 різні біоми",
-      icon: "fa-compass",
-      current: 3,
-      target: 3,
-      xp: 500,
-      claimed: false,
-    },
-  ],
-};
-
-const BONUSES = [
-  {
-    title: "Стрік активності",
-    desc: "Заходь 7 днів поспіль і отримай +15% XP до кінця тижня.",
-    icon: "fa-fire-flame-curved",
-    tag: "Активно · день 4/7",
-  },
-  {
-    title: "Подвійний вікенд",
-    desc: "У суботу та неділю всі щоденні квести дають ×2 XP.",
-    icon: "fa-calendar-days",
-    tag: "Щоп’ятниці 18:00",
-  },
-  {
-    title: "Подарунок громаді",
-    desc: "Коли сервер б’є рекорд онлайну — усім гравцям кейс удачі.",
-    icon: "fa-users",
-    tag: "Івент сезону",
-  },
-];
-
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
-let activeQuestTab = "daily";
+const state = {
+  player: localStorage.getItem("bp_player") || "Steve",
+  view: null,
+  questTab: "daily",
+};
 
 function toast(message) {
   const el = $("#toast");
@@ -137,8 +15,24 @@ function toast(message) {
   toast._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
-function formatTimer(ms) {
-  if (ms <= 0) return "Сезон завершено";
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || res.statusText || "request_failed");
+  }
+  return data;
+}
+
+function formatTimer(endsAt) {
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (Number.isNaN(ms) || ms <= 0) return "Сезон завершено";
   const total = Math.floor(ms / 1000);
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
@@ -148,37 +42,45 @@ function formatTimer(ms) {
   return `До кінця сезону: ${days}д ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
 }
 
-function updateTimer() {
-  $("#seasonTimer").textContent = formatTimer(SEASON.endsAt - Date.now());
-}
-
 function renderProgress() {
-  $("#levelVal").textContent = String(SEASON.level);
-  $("#xpLabel").textContent = `${SEASON.xp.toLocaleString("uk-UA")} / ${SEASON.xpToNext.toLocaleString("uk-UA")} XP`;
+  const { season, player } = state.view;
+  if (!season || !player) return;
+  $("#seasonChip").innerHTML = `<i class="fa-solid fa-leaf"></i> Сезон ${season.number}`;
+  $("#levelVal").textContent = String(player.level);
+  $("#xpLabel").textContent = `${player.xp.toLocaleString("uk-UA")} / ${player.xp_to_next.toLocaleString("uk-UA")} XP`;
+  const pct = Math.min(100, Math.round((player.xp / player.xp_to_next) * 100));
   const fill = $("#xpFill");
-  const bar = fill.parentElement;
-  const pct = Math.min(100, Math.round((SEASON.xp / SEASON.xpToNext) * 100));
   requestAnimationFrame(() => {
     fill.style.width = `${pct}%`;
   });
-  bar.setAttribute("aria-valuenow", String(SEASON.xp));
-  bar.setAttribute("aria-valuemax", String(SEASON.xpToNext));
+  const bar = fill.parentElement;
+  bar.setAttribute("aria-valuenow", String(player.xp));
+  bar.setAttribute("aria-valuemax", String(player.xp_to_next));
+  $("#seasonTimer").textContent = formatTimer(season.ends_at);
+  $("#premiumBtn").classList.toggle("is-active", !!player.premium);
+  $("#premiumBtn").innerHTML = player.premium
+    ? '<i class="fa-solid fa-crown"></i> Premium ON'
+    : '<i class="fa-solid fa-crown"></i> Premium';
+  const playerInput = $("#playerName");
+  if (playerInput && document.activeElement !== playerInput) {
+    playerInput.value = state.player;
+  }
 }
 
 function renderTrack() {
   const track = $("#rewardTrack");
+  const rewards = state.view.rewards || [];
+  const level = state.view.player?.level || 1;
   track.innerHTML = "";
 
-  REWARDS.forEach((reward, index) => {
-    const locked = reward.level > SEASON.level || (reward.premium && !SEASON.premium);
-    const current = reward.level === SEASON.level;
+  rewards.forEach((reward, index) => {
     const el = document.createElement("article");
     el.className = [
       "reward",
       reward.premium ? "is-premium" : "is-free",
       reward.claimed ? "is-claimed" : "",
-      locked ? "is-locked" : "",
-      current ? "is-current" : "",
+      reward.locked ? "is-locked" : "",
+      reward.level === level ? "is-current" : "",
     ].filter(Boolean).join(" ");
     el.style.animationDelay = `${index * 40}ms`;
     el.innerHTML = `
@@ -191,44 +93,52 @@ function renderTrack() {
       </div>
       <div class="reward__name">${reward.name}</div>
     `;
-
-    el.addEventListener("click", () => {
-      if (reward.claimed) {
-        toast(`Уже отримано: ${reward.name}`);
-        return;
+    el.addEventListener("click", async () => {
+      if (reward.claimed) return toast(`Уже отримано: ${reward.name}`);
+      if (reward.locked) {
+        return toast(reward.premium && !state.view.player.premium
+          ? "Потрібен Premium Pass"
+          : `Відкриється на рівні ${reward.level}`);
       }
-      if (reward.level > SEASON.level) {
-        toast(`Відкриється на рівні ${reward.level}`);
-        return;
+      try {
+        const res = await api("/api/battlepass/claim-reward", {
+          method: "POST",
+          body: JSON.stringify({
+            player: state.player,
+            level: reward.level,
+            premium: reward.premium,
+          }),
+        });
+        state.view = res.view;
+        renderAll();
+        toast(`Нагорода: ${reward.name}`);
+      } catch (err) {
+        toast(err.message);
       }
-      if (reward.premium && !SEASON.premium) {
-        toast("Потрібен Premium Pass");
-        return;
-      }
-      reward.claimed = true;
-      toast(`Нагорода отримана: ${reward.name}`);
-      renderTrack();
     });
-
     track.appendChild(el);
   });
 
   const current = track.querySelector(".is-current");
-  if (current) {
-    current.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  }
+  if (current) current.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
 }
 
 function renderQuests() {
   const list = $("#questList");
+  const quests = state.view.quests?.[state.questTab] || [];
   list.innerHTML = "";
-  QUESTS[activeQuestTab].forEach((quest, index) => {
-    const done = quest.current >= quest.target;
+  if (!quests.length) {
+    list.innerHTML = `<div class="empty-quests">Немає квестів у цій вкладці</div>`;
+    return;
+  }
+
+  quests.forEach((quest, index) => {
     const pct = Math.min(100, Math.round((quest.current / quest.target) * 100));
     const el = document.createElement("article");
     el.className = "quest";
     el.style.animationDelay = `${index * 50}ms`;
     el.setAttribute("role", "listitem");
+    const label = quest.claimed ? "Отримано" : quest.claimable ? "Забрати" : "В процесі";
     el.innerHTML = `
       <div class="quest__icon"><i class="fa-solid ${quest.icon}"></i></div>
       <div class="quest__body">
@@ -241,8 +151,8 @@ function renderQuests() {
       </div>
       <div class="quest__reward">
         <div class="quest__xp">+${quest.xp} XP</div>
-        <button type="button" class="btn-claim ${quest.claimed ? "is-done" : ""}" data-id="${quest.id}" ${!done || quest.claimed ? "disabled" : ""}>
-          ${quest.claimed ? "Отримано" : done ? "Забрати" : "В процесі"}
+        <button type="button" class="btn-claim ${quest.claimed ? "is-done" : ""}" data-id="${quest.id}" ${!quest.claimable ? "disabled" : ""}>
+          ${label}
         </button>
       </div>
     `;
@@ -251,8 +161,28 @@ function renderQuests() {
 }
 
 function renderBonuses() {
-  const grid = $("#bonusGrid");
-  grid.innerHTML = BONUSES.map((bonus, index) => `
+  // Static seasonal bonuses for now; can be moved to DB later.
+  const bonuses = [
+    {
+      title: "Стрік активності",
+      desc: "Заходь 7 днів поспіль і отримай +15% XP до кінця тижня.",
+      icon: "fa-fire-flame-curved",
+      tag: "Подія login_day",
+    },
+    {
+      title: "Подвійний вікенд",
+      desc: "У суботу та неділю всі щоденні квести дають ×2 XP.",
+      icon: "fa-calendar-days",
+      tag: "Налаштовується адміном",
+    },
+    {
+      title: "Подарунок громаді",
+      desc: "Рекорд онлайну → кейс удачі всім гравцям сезону.",
+      icon: "fa-users",
+      tag: "Івент сезону",
+    },
+  ];
+  $("#bonusGrid").innerHTML = bonuses.map((bonus, index) => `
     <article class="bonus" style="animation-delay:${index * 70}ms">
       <div class="bonus__icon"><i class="fa-solid ${bonus.icon}"></i></div>
       <h3>${bonus.title}</h3>
@@ -262,37 +192,30 @@ function renderBonuses() {
   `).join("");
 }
 
-function claimQuest(id) {
-  const quest = [...QUESTS.daily, ...QUESTS.weekly].find((q) => q.id === id);
-  if (!quest || quest.claimed || quest.current < quest.target) return;
-
-  quest.claimed = true;
-  SEASON.xp += quest.xp;
-  while (SEASON.xp >= SEASON.xpToNext) {
-    SEASON.xp -= SEASON.xpToNext;
-    SEASON.level += 1;
-    SEASON.xpToNext = Math.round(SEASON.xpToNext * 1.08);
+function renderAll() {
+  if (!state.view?.season) {
+    toast("Немає активного сезону — створи в адмінці");
+    return;
   }
-  toast(`+${quest.xp} XP · рівень ${SEASON.level}`);
+  const season = state.view.season;
+  $(".hero__lead").textContent =
+    `Сезон «${season.name}» — виконуй квести в Minecraft, збирай XP і відкривай нагороди.`;
   renderProgress();
   renderTrack();
   renderQuests();
+  renderBonuses();
 }
 
-function setPremium(active) {
-  SEASON.premium = active;
-  $("#premiumBtn").classList.toggle("is-active", active);
-  $("#premiumBtn").innerHTML = active
-    ? '<i class="fa-solid fa-crown"></i> Premium ON'
-    : '<i class="fa-solid fa-crown"></i> Premium';
-  toast(active ? "Premium Pass активовано" : "Premium Pass вимкнено");
-  renderTrack();
+async function loadView() {
+  const data = await api(`/api/battlepass/view?player=${encodeURIComponent(state.player)}`);
+  state.view = data;
+  renderAll();
 }
 
 function bindEvents() {
   $$("[data-quest-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      activeQuestTab = btn.dataset.questTab;
+      state.questTab = btn.dataset.questTab;
       $$("[data-quest-tab]").forEach((b) => {
         const on = b === btn;
         b.classList.toggle("active", on);
@@ -302,10 +225,20 @@ function bindEvents() {
     });
   });
 
-  $("#questList").addEventListener("click", (e) => {
+  $("#questList").addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-claim");
     if (!btn || btn.disabled) return;
-    claimQuest(btn.dataset.id);
+    try {
+      const res = await api("/api/battlepass/claim-quest", {
+        method: "POST",
+        body: JSON.stringify({ player: state.player, quest_id: btn.dataset.id }),
+      });
+      state.view = res.view;
+      renderAll();
+      toast(`+${res.xp_gained} XP · рівень ${state.view.player.level}`);
+    } catch (err) {
+      toast(err.message);
+    }
   });
 
   $("#trackPrev").addEventListener("click", () => {
@@ -315,19 +248,40 @@ function bindEvents() {
     $("#rewardTrack").scrollBy({ left: 280, behavior: "smooth" });
   });
 
-  $("#premiumBtn").addEventListener("click", () => setPremium(!SEASON.premium));
+  async function setPremium(active) {
+    try {
+      const res = await api("/api/battlepass/premium", {
+        method: "POST",
+        body: JSON.stringify({ player: state.player, premium: active }),
+      });
+      state.view = res.view;
+      renderAll();
+      toast(active ? "Premium Pass активовано" : "Premium Pass вимкнено");
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  $("#premiumBtn").addEventListener("click", () => setPremium(!state.view.player.premium));
   $("#unlockPremium").addEventListener("click", () => setPremium(true));
+
+  const playerInput = $("#playerName");
+  if (playerInput) {
+    playerInput.value = state.player;
+    playerInput.addEventListener("change", async () => {
+      state.player = playerInput.value.trim() || "Steve";
+      localStorage.setItem("bp_player", state.player);
+      await loadView();
+      toast(`Гравець: ${state.player}`);
+    });
+  }
+
+  setInterval(() => {
+    if (state.view?.season?.ends_at) {
+      $("#seasonTimer").textContent = formatTimer(state.view.season.ends_at);
+    }
+  }, 1000);
 }
 
-function init() {
-  $("#seasonChip").innerHTML = `<i class="fa-solid fa-leaf"></i> Сезон ${SEASON.number}`;
-  renderProgress();
-  renderTrack();
-  renderQuests();
-  renderBonuses();
-  bindEvents();
-  updateTimer();
-  setInterval(updateTimer, 1000);
-}
-
-init();
+bindEvents();
+loadView().catch((err) => toast(err.message));

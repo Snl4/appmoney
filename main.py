@@ -12,6 +12,7 @@ from aiogram.types import MenuButtonWebApp, WebAppInfo
 from dotenv import load_dotenv
 
 from bot.database import init_db
+from bot.battlepass_db import init_battlepass_db, seed_demo_if_empty
 from bot.handlers import router
 from bot.webapp_api import create_app
 
@@ -42,6 +43,8 @@ async def main() -> None:
         sys.exit(1)
 
     await init_db()
+    await init_battlepass_db()
+    await seed_demo_if_empty()
     await run_webapp_server(token)
 
     webapp_url = os.getenv("WEBAPP_URL", "")
