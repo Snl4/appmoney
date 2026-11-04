@@ -10,6 +10,21 @@ const state = {
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+const KNOWN_ICONS = new Set([
+  "fa-coins", "fa-key", "fa-helmet-safety", "fa-bolt", "fa-face-smile", "fa-shirt",
+  "fa-flag", "fa-sack-dollar", "fa-fire", "fa-certificate", "fa-toolbox", "fa-horse",
+  "fa-box-open", "fa-sun", "fa-crown", "fa-person-walking", "fa-hammer", "fa-comments",
+  "fa-skull", "fa-cube", "fa-handshake", "fa-compass", "fa-gift", "fa-trophy",
+  "fa-scroll", "fa-star", "fa-users", "fa-calendar-days", "fa-fire-flame-curved",
+]);
+
+function safeIcon(icon, fallback = "fa-gift") {
+  const name = String(icon || "").replace(/^fa-solid\s+/, "").trim();
+  if (KNOWN_ICONS.has(name)) return name;
+  if (name.startsWith("fa-") && KNOWN_ICONS.has(name)) return name;
+  return fallback;
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : ms));
 }
@@ -77,7 +92,7 @@ function showFxOverlay({ mode, title, sub, kicker, icon }) {
     $("#fxKicker").textContent = kicker;
     $("#fxTitle").textContent = title;
     $("#fxSub").textContent = sub || "";
-    $("#fxIcon").className = `fa-solid ${icon || "fa-trophy"}`;
+    $("#fxIcon").className = `fa-solid ${safeIcon(icon, mode === "quest" ? "fa-scroll" : "fa-gift")}`;
     spawnBurst(mode === "quest" ? "quest" : "gold");
 
     requestAnimationFrame(() => {
@@ -152,7 +167,7 @@ async function playQuestClaimFx(quest, xpGained, prevPlayer) {
     kicker: "Квест виконано",
     title: quest.title,
     sub: `+${xpGained} XP зараховано до Battle Pass`,
-    icon: quest.icon || "fa-scroll",
+    icon: safeIcon(quest.icon, "fa-scroll"),
   });
   await animateXpBar(prevPlayer, state.view.player);
   if (card) card.classList.remove("is-completing");
@@ -173,7 +188,7 @@ async function playRewardOpenFx(reward) {
     kicker: reward.premium ? "Premium нагорода" : "Нагороду відкрито",
     title: reward.name,
     sub: `Рівень ${reward.level} · ${reward.premium ? "Premium трек" : "Безкоштовний трек"}`,
-    icon: reward.icon || "fa-gift",
+    icon: safeIcon(reward.icon, "fa-gift"),
   });
 
   // Re-find after re-render and pop claimed state.
@@ -236,7 +251,7 @@ function renderTrack() {
         <span class="reward__badge" aria-hidden="true">
           <i class="fa-solid ${reward.premium ? "fa-crown" : "fa-gift"}"></i>
         </span>
-        <i class="fa-solid ${reward.icon}" aria-hidden="true"></i>
+        <i class="fa-solid ${safeIcon(reward.icon)}" aria-hidden="true"></i>
       </div>
       <div class="reward__name">${reward.name}</div>
     `;
@@ -292,7 +307,7 @@ function renderQuests() {
     el.setAttribute("role", "listitem");
     const label = quest.claimed ? "Отримано" : quest.claimable ? "Забрати" : "В процесі";
     el.innerHTML = `
-      <div class="quest__icon"><i class="fa-solid ${quest.icon}"></i></div>
+      <div class="quest__icon"><i class="fa-solid ${safeIcon(quest.icon, "fa-scroll")}"></i></div>
       <div class="quest__body">
         <h3>${quest.title}</h3>
         <p>${quest.desc}</p>
