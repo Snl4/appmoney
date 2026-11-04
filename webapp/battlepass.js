@@ -88,7 +88,7 @@ function showFxOverlay({ mode, title, sub, kicker, icon }) {
     overlay.hidden = false;
     overlay.setAttribute("aria-hidden", "false");
     overlay.classList.toggle("is-quest", mode === "quest");
-    overlay.classList.remove("is-open");
+    overlay.classList.remove("is-open", "is-revealed");
     $("#fxKicker").textContent = kicker;
     $("#fxTitle").textContent = title;
     $("#fxSub").textContent = sub || "";
@@ -97,13 +97,16 @@ function showFxOverlay({ mode, title, sub, kicker, icon }) {
 
     requestAnimationFrame(() => {
       overlay.classList.add("is-open");
+      if (mode !== "quest") {
+        setTimeout(() => overlay.classList.add("is-revealed"), reduceMotion ? 0 : 420);
+      }
     });
 
     const finish = () => {
       closeBtn.removeEventListener("click", finish);
       overlay.removeEventListener("click", onBackdrop);
       document.removeEventListener("keydown", onKey);
-      overlay.classList.remove("is-open", "is-quest");
+      overlay.classList.remove("is-open", "is-quest", "is-revealed");
       overlay.hidden = true;
       overlay.setAttribute("aria-hidden", "true");
       $("#fxBurst").innerHTML = "";

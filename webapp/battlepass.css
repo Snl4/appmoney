@@ -1321,40 +1321,62 @@ main {
   padding: 28px 22px 22px;
   border-radius: 22px;
   text-align: center;
-  background:
-    linear-gradient(160deg, rgba(255, 169, 1, 0.16), rgba(35, 30, 40, 0.96) 40%, rgba(25, 22, 29, 0.98));
+  background: #231e28;
   border: 1px solid var(--border-accent);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   animation: fxCardIn 0.45s var(--ease) both;
   overflow: hidden;
 }
 
-.fx-card.is-quest {
+.fx-card::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -20%;
+  width: 140%;
+  height: 55%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 169, 1, 0.18) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.fx-overlay.is-quest .fx-card {
   border-color: rgba(52, 211, 153, 0.4);
-  background:
-    linear-gradient(160deg, rgba(52, 211, 153, 0.14), rgba(35, 30, 40, 0.96) 42%, rgba(25, 22, 29, 0.98));
+}
+
+.fx-overlay.is-quest .fx-card::before {
+  background: radial-gradient(ellipse at center, rgba(52, 211, 153, 0.16) 0%, transparent 68%);
 }
 
 .fx-rays {
   position: absolute;
-  inset: -40% -20% auto;
-  height: 220px;
-  background: conic-gradient(from 0deg, transparent, rgba(255, 169, 1, 0.18), transparent 18%, transparent 50%, rgba(255, 123, 2, 0.16), transparent 68%);
-  animation: fxSpin 8s linear infinite;
-  opacity: 0.7;
+  left: 50%;
+  top: 18%;
+  width: 180px;
+  height: 180px;
+  transform: translate(-50%, -30%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 169, 1, 0.28) 0%, rgba(255, 123, 2, 0.08) 42%, transparent 70%);
   pointer-events: none;
+  filter: blur(2px);
 }
 
-@keyframes fxSpin {
-  to { transform: rotate(360deg); }
+.fx-overlay.is-quest .fx-rays {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.28) 0%, rgba(16, 185, 129, 0.08) 42%, transparent 70%);
 }
 
 .fx-stage {
   position: relative;
-  height: 150px;
-  margin: 8px auto 14px;
+  z-index: 1;
+  height: 140px;
+  margin: 4px auto 14px;
   display: grid;
   place-items: center;
+}
+
+.fx-chest,
+.fx-icon-wrap {
+  grid-area: 1 / 1;
 }
 
 .fx-chest {
@@ -1363,6 +1385,8 @@ main {
   height: 84px;
   transform-origin: 50% 80%;
   animation: fxChestBounce 0.7s var(--ease) both;
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+  z-index: 1;
 }
 
 .fx-chest__body {
@@ -1374,10 +1398,6 @@ main {
   border-radius: 10px 10px 14px 14px;
   background: linear-gradient(180deg, #ffb21a, #ff7b02);
   box-shadow: 0 12px 24px rgba(255, 123, 2, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  display: grid;
-  place-items: center;
-  color: rgba(0, 0, 0, 0.35);
-  font-size: 1.3rem;
 }
 
 .fx-chest__lid {
@@ -1390,7 +1410,7 @@ main {
   background: linear-gradient(180deg, #ffd36a, #ffa901);
   transform-origin: 50% 100%;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.45s var(--ease);
+  transition: transform 0.4s var(--ease);
 }
 
 .fx-chest__lid::after {
@@ -1410,24 +1430,33 @@ main {
   transform: rotateX(-118deg) translateY(-8px);
 }
 
+.fx-overlay.is-open .fx-chest,
+.fx-overlay.is-revealed .fx-chest {
+  opacity: 0;
+  transform: scale(0.82) translateY(8px);
+  pointer-events: none;
+}
+
 .fx-icon-wrap {
-  position: absolute;
-  width: 86px;
-  height: 86px;
-  border-radius: 22px;
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 24px;
   display: grid;
   place-items: center;
-  background: rgba(18, 15, 22, 0.88);
-  border: 1px solid rgba(255, 169, 1, 0.45);
+  background: #17131c;
+  border: 1px solid rgba(255, 169, 1, 0.5);
   color: var(--gold);
   font-size: 2rem;
   opacity: 0;
-  transform: translateY(18px) scale(0.6);
-  box-shadow: 0 0 40px rgba(255, 169, 1, 0.35);
+  transform: scale(0.7);
+  box-shadow: 0 0 36px rgba(255, 169, 1, 0.28);
+  z-index: 2;
 }
 
-.fx-overlay.is-open .fx-icon-wrap {
-  animation: fxIconRise 0.65s 0.28s var(--ease) forwards;
+.fx-overlay.is-open .fx-icon-wrap,
+.fx-overlay.is-revealed .fx-icon-wrap {
+  animation: fxIconPop 0.55s 0.22s var(--ease) forwards;
 }
 
 .fx-overlay.is-quest .fx-chest { display: none; }
@@ -1437,7 +1466,7 @@ main {
   animation: fxIconPop 0.55s var(--ease) both;
   border-color: rgba(52, 211, 153, 0.45);
   color: #6ee7b7;
-  box-shadow: 0 0 40px rgba(52, 211, 153, 0.3);
+  box-shadow: 0 0 36px rgba(52, 211, 153, 0.28);
 }
 
 .fx-kicker {
@@ -1526,14 +1555,9 @@ main {
   100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-@keyframes fxIconRise {
-  0% { opacity: 0; transform: translateY(22px) scale(0.55); }
-  100% { opacity: 1; transform: translateY(-18px) scale(1); }
-}
-
 @keyframes fxIconPop {
-  0% { opacity: 0; transform: scale(0.5); }
-  60% { opacity: 1; transform: scale(1.12); }
+  0% { opacity: 0; transform: scale(0.55); }
+  65% { opacity: 1; transform: scale(1.08); }
   100% { opacity: 1; transform: scale(1); }
 }
 
@@ -1553,8 +1577,14 @@ main {
   }
 
   .fx-overlay.is-open .fx-icon-wrap,
+  .fx-overlay.is-revealed .fx-icon-wrap,
   .fx-overlay.is-quest .fx-icon-wrap {
     opacity: 1;
     transform: none;
+  }
+
+  .fx-overlay.is-open .fx-chest,
+  .fx-overlay.is-revealed .fx-chest {
+    display: none;
   }
 }
