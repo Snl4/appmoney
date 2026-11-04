@@ -5,7 +5,14 @@ const state = {
   player: localStorage.getItem("bp_player") || "Steve",
   view: null,
   questTab: "daily",
+  fxBusy: false,
 };
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : ms));
+}
 
 function toast(message) {
   const el = $("#toast");
@@ -40,6 +47,145 @@ function formatTimer(endsAt) {
   const secs = total % 60;
   const pad = (n) => String(n).padStart(2, "0");
   return `До кінця сезону: ${days}д ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+}
+
+function spawnBurst(kind = "gold") {
+  const burst = $("#fxBurst");
+  burst.innerHTML = "";
+  const count = reduceMotion ? 0 : 28;
+  for (let i = 0; i < count; i += 1) {
+    const p = document.createElement("span");
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
+    const dist = 90 + Math.random() * 160;
+    p.className = `fx-particle ${i % 3 === 0 ? "is-round" : ""} ${i % 4 === 0 ? "is-soft" : ""} ${kind === "quest" && i % 5 === 0 ? "is-emerald" : ""}`;
+    p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    p.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    p.style.setProperty("--rot", `${Math.random() * 240 - 120}deg`);
+    p.style.animationDelay = `${Math.random() * 120}ms`;
+    burst.appendChild(p);
+  }
+}
+
+function showFxOverlay({ mode, title, sub, kicker, icon }) {
+  return new Promise((resolve) => {
+    const overlay = $("#fxOverlay");
+    const closeBtn = $("#fxClose");
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    overlay.classList.toggle("is-quest", mode === "quest");
+    overlay.classList.remove("is-open");
+    $("#fxKicker").textContent = kicker;
+    $("#fxTitle").textContent = title;
+    $("#fxSub").textContent = sub || "";
+    $("#fxIcon").className = `fa-solid ${icon || "fa-trophy"}`;
+    spawnBurst(mode === "quest" ? "quest" : "gold");
+
+    requestAnimationFrame(() => {
+      overlay.classList.add("is-open");
+    });
+
+    const finish = () => {
+      closeBtn.removeEventListener("click", finish);
+      overlay.removeEventListener("click", onBackdrop);
+      document.removeEventListener("keydown", onKey);
+      overlay.classList.remove("is-open", "is-quest");
+      overlay.hidden = true;
+      overlay.setAttribute("aria-hidden", "true");
+      $("#fxBurst").innerHTML = "";
+      resolve();
+    };
+
+    const onBackdrop = (e) => {
+      if (e.target === overlay || e.target.classList.contains("fx-backdrop")) finish();
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape" || e.key === "Enter") finish();
+    };
+
+    closeBtn.addEventListener("click", finish);
+    overlay.addEventListener("click", onBackdrop);
+    document.addEventListener("keydown", onKey);
+
+    if (reduceMotion) {
+      // still show modal, user dismisses
+    }
+  });
+}
+
+function flyXpChip(fromEl, amount) {
+  if (reduceMotion || !fromEl) return;
+  const rect = fromEl.getBoundingClientRect();
+  const chip = document.createElement("div");
+  chip.className = "fx-xp-chip";
+  chip.textContent = `+${amount} XP`;
+  chip.style.left = `${rect.left + rect.width / 2}px`;
+  chip.style.top = `${rect.top}px`;
+  $("#fxFloatLayer").appendChild(chip);
+  setTimeout(() => chip.remove(), 1100);
+}
+
+async function animateXpBar(prevPlayer, nextPlayer) {
+  const fill = $("#xpFill");
+  const panel = $(".xp-panel");
+  if (!fill || !panel || !nextPlayer) return;
+
+  fill.classList.add("is-surge");
+  if (prevPlayer && nextPlayer.level > prevPlayer.level) {
+    panel.classList.add("is-levelup");
+  }
+  await wait(200);
+  renderProgress();
+  await wait(700);
+  fill.classList.remove("is-surge");
+  panel.classList.remove("is-levelup");
+}
+
+async function playQuestClaimFx(quest, xpGained, prevPlayer) {
+  const card = document.querySelector(`.btn-claim[data-id="${quest.id}"]`)?.closest(".quest");
+  if (card) {
+    card.classList.add("is-completing");
+    flyXpChip(card.querySelector(".quest__xp"), xpGained);
+  }
+  await wait(350);
+  await showFxOverlay({
+    mode: "quest",
+    kicker: "Квест виконано",
+    title: quest.title,
+    sub: `+${xpGained} XP зараховано до Battle Pass`,
+    icon: quest.icon || "fa-scroll",
+  });
+  await animateXpBar(prevPlayer, state.view.player);
+  if (card) card.classList.remove("is-completing");
+}
+
+async function playRewardOpenFx(reward) {
+  const node = [...document.querySelectorAll(".reward")].find((el) => {
+    return el.querySelector(".reward__name")?.textContent === reward.name;
+  });
+  if (node) {
+    node.classList.add("is-opening");
+    await wait(520);
+    node.classList.remove("is-opening");
+  }
+
+  await showFxOverlay({
+    mode: "reward",
+    kicker: reward.premium ? "Premium нагорода" : "Нагороду відкрито",
+    title: reward.name,
+    sub: `Рівень ${reward.level} · ${reward.premium ? "Premium трек" : "Безкоштовний трек"}`,
+    icon: reward.icon || "fa-gift",
+  });
+
+  // Re-find after re-render and pop claimed state.
+  requestAnimationFrame(() => {
+    const claimed = [...document.querySelectorAll(".reward")].find((el) => {
+      return el.querySelector(".reward__name")?.textContent === reward.name;
+    });
+    if (claimed) {
+      claimed.classList.add("is-just-claimed");
+      setTimeout(() => claimed.classList.remove("is-just-claimed"), 800);
+    }
+  });
 }
 
 function renderProgress() {
@@ -81,6 +227,7 @@ function renderTrack() {
       reward.claimed ? "is-claimed" : "",
       reward.locked ? "is-locked" : "",
       reward.level === level ? "is-current" : "",
+      reward.claimable ? "is-claimable" : "",
     ].filter(Boolean).join(" ");
     el.style.animationDelay = `${index * 40}ms`;
     el.innerHTML = `
@@ -94,12 +241,14 @@ function renderTrack() {
       <div class="reward__name">${reward.name}</div>
     `;
     el.addEventListener("click", async () => {
+      if (state.fxBusy) return;
       if (reward.claimed) return toast(`Уже отримано: ${reward.name}`);
       if (reward.locked) {
         return toast(reward.premium && !state.view.player.premium
           ? "Потрібен Premium Pass"
           : `Відкриється на рівні ${reward.level}`);
       }
+      state.fxBusy = true;
       try {
         const res = await api("/api/battlepass/claim-reward", {
           method: "POST",
@@ -109,11 +258,14 @@ function renderTrack() {
             premium: reward.premium,
           }),
         });
+        await playRewardOpenFx(reward);
         state.view = res.view;
         renderAll();
         toast(`Нагорода: ${reward.name}`);
       } catch (err) {
         toast(err.message);
+      } finally {
+        state.fxBusy = false;
       }
     });
     track.appendChild(el);
@@ -135,7 +287,7 @@ function renderQuests() {
   quests.forEach((quest, index) => {
     const pct = Math.min(100, Math.round((quest.current / quest.target) * 100));
     const el = document.createElement("article");
-    el.className = "quest";
+    el.className = `quest${quest.claimable ? " is-claimable" : ""}`;
     el.style.animationDelay = `${index * 50}ms`;
     el.setAttribute("role", "listitem");
     const label = quest.claimed ? "Отримано" : quest.claimable ? "Забрати" : "В процесі";
@@ -161,7 +313,6 @@ function renderQuests() {
 }
 
 function renderBonuses() {
-  // Static seasonal bonuses for now; can be moved to DB later.
   const bonuses = [
     {
       title: "Стрік активності",
@@ -227,17 +378,25 @@ function bindEvents() {
 
   $("#questList").addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-claim");
-    if (!btn || btn.disabled) return;
+    if (!btn || btn.disabled || state.fxBusy) return;
+    state.fxBusy = true;
+    const prevPlayer = { ...state.view.player };
+    const quest = (state.view.quests?.[state.questTab] || []).find((q) => q.id === btn.dataset.id);
     try {
       const res = await api("/api/battlepass/claim-quest", {
         method: "POST",
         body: JSON.stringify({ player: state.player, quest_id: btn.dataset.id }),
       });
       state.view = res.view;
+      if (quest) {
+        await playQuestClaimFx(quest, res.xp_gained, prevPlayer);
+      }
       renderAll();
       toast(`+${res.xp_gained} XP · рівень ${state.view.player.level}`);
     } catch (err) {
       toast(err.message);
+    } finally {
+      state.fxBusy = false;
     }
   });
 
